@@ -1,0 +1,36 @@
+services:
+  api:
+    build: .
+    ports:
+      - "9091:9091"
+      - "9092:9092"
+    environment:
+      PORTO_API_HOME: /runtime
+      API_ENV: ${API_ENV:-dev}
+      LOG_PATH: /runtime/logs
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      REGISTRY_DB_HOST: ${REGISTRY_DB_HOST:-postgres}
+      REGISTRY_DB_PORT: ${REGISTRY_DB_PORT:-5432}
+      REGISTRY_DB_USER: ${REGISTRY_DB_USER:-registry}
+      REGISTRY_DB_PASSWORD: ${REGISTRY_DB_PASSWORD:-registry}
+    volumes:
+      - .:/runtime
+    depends_on:
+      postgres:
+        condition: service_started
+        required: false
+
+  postgres:
+    profiles: ["prod"]
+    image: postgres:16
+    environment:
+      POSTGRES_DB: registry
+      POSTGRES_USER: registry
+      POSTGRES_PASSWORD: registry
+    ports:
+      - "5432:5432"
+    volumes:
+      - registry-postgres:/var/lib/postgresql/data
+
+volumes:
+  registry-postgres:

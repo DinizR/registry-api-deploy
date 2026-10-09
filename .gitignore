@@ -1,0 +1,36 @@
+!.mvn/wrapper/maven-wrapper.jar
+**/target/
+
+*.class
+# Built host and plugin JARs (copied in by Maven / start-docker.sh)
+*.jar
+
+# IntelliJ IDEA
+**/.idea/
+**/.idea/*
+*.iws
+*.iml
+*.ipr
+**/.run/
+**/.run/*
+
+# Eclipse
+**/.classpath
+**/.project
+**/.settings/
+
+# VS Code / Cursor
+**/.vscode/
+.cursor/
+.envrc.local
+
+### Mac OS ###
+.DS_Store
+
+*.zip
+*.log
+logs/
+*.tmp
+
+## Runtime / local data (H2 files, uploads) ##
+data/**
