@@ -22,6 +22,9 @@
 # VS Code / Cursor
 **/.vscode/
 .cursor/
+.envrc.local
+switch-remote.sh
+.git-remote-host
 
 ### Mac OS ###
 .DS_Store

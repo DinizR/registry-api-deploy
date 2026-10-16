@@ -7,7 +7,7 @@ export LOG_PATH="${LOG_PATH:-$PORTO_API_HOME/logs}"
 export LOG_LEVEL="${LOG_LEVEL:-INFO}"
 mkdir -p "$LOG_PATH"
 
-PORTO_API_SRC="${PORTO_API_SRC:-$HOME/projects/porto-api}"
+PORTO_API_SRC="${PORTO_API_SRC:-$(cd "$PORTO_API_HOME/../hexagonalboot-api" && pwd)}"
 JAR=""
 if ls "$PORTO_API_HOME"/porto-api-*.jar >/dev/null 2>&1; then
   JAR="$(ls -1t "$PORTO_API_HOME"/porto-api-*.jar | head -1)"
@@ -22,7 +22,7 @@ if [ -n "$JAR" ]; then
 fi
 
 if [ ! -f "$PORTO_API_SRC/pom.xml" ]; then
-  echo "No porto-api jar in $PORTO_API_HOME and PORTO_API_SRC=$PORTO_API_SRC is not a porto-api tree." >&2
+  echo "No porto-api jar in $PORTO_API_HOME and PORTO_API_SRC=$PORTO_API_SRC is not a hexagonalboot-api tree." >&2
   echo "Set PORTO_API_SRC or copy the boot jar into this directory." >&2
   exit 1
 fi

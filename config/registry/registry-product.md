@@ -362,10 +362,10 @@ Plugins do not use `@ComponentScan` or `@Autowired`; they receive `ApiContext` a
 cd ~/projects/porto-core && mvn install -DskipTests
 
 # 2. Build plugins (copies JARs into porto-api/plugins/)
-cd ~/projects/porto-api-plugins && mvn package
+cd ~/projects/porto-workspace/porto-api-plugins && mvn package
 
 # 3. Run registry application
-cd ~/projects/porto-api && ./mvnw spring-boot:run
+cd ~/projects/porto-workspace/hexagonalboot-api && ./mvnw spring-boot:run
 ```
 
 Select registry plugins at build time by building only the `registry` aggregator in `porto-api-plugins`. The host JAR is always the same; runtime behaviour is driven by `config/api-dev.yml` (application path) and the YAML registries under `config/registry/`.

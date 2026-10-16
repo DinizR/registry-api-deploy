@@ -1,16 +1,50 @@
 # registry-api-deploy
 
-Runtime home (`PORTO_API_HOME`) for the **registry** API. The Spring Boot host lives in [porto-api](../porto-api); plugin sources live in [porto-api-plugins](../porto-api-plugins). This tree is the product: config, plugin YAML, Liquibase, and Docker.
+Runtime home (`PORTO_API_HOME`) for the **registry** API. The Spring Boot host lives in [hexagonalboot-api](../hexagonalboot-api); plugin sources live in [porto-api-plugins](../porto-api-plugins). This tree is the product: config, plugin YAML, Liquibase, and Docker.
 
 Product / plugin architecture: [`config/registry/registry-product.md`](config/registry/registry-product.md). HTTP contract: [`config/registry/openapi.yaml`](config/registry/openapi.yaml).
 
-Clone the three trees next to each other (default layout used below):
+## Create `porto-workspace` and clone the projects
+
+`porto-workspace` is a directory on disk, not a git repository. Create it, then clone each project into it:
+
+```bash
+mkdir -p ~/projects/porto-workspace
+cd ~/projects/porto-workspace
+
+git clone git@gitlab.com:shine-group114134/hexagonalboot-api.git
+git clone git@gitlab.com:shine-group114134/porto-api-plugins.git
+git clone git@gitlab.com:shine-group114134/registry-api-deploy.git
+```
+
+Public GitHub setup (no plugin reactor repo): see [hexagonalboot-api](https://github.com/DinizR/hexagonalboot-api).
+
+You should end up with:
 
 ```
-~/projects/porto-api
-~/projects/porto-api-plugins
-~/projects/registry-api-deploy
+~/projects/porto-workspace/hexagonalboot-api
+~/projects/porto-workspace/porto-api-plugins
+~/projects/porto-workspace/registry-api-deploy
 ```
+
+Do not `git init` inside `porto-workspace`. Each child stays its own repo. `porto-core` stays outside the workspace (`~/projects/porto-core`).
+
+### direnv (local workspace `.envrc`)
+
+The workspace folder is not a repo, so it has no committed `.envrc`. After cloning, copy the template from the host and allow direnv:
+
+```bash
+cd ~/projects/porto-workspace
+cp hexagonalboot-api/docs/porto-workspace.envrc .envrc
+# or: ../switch-app.sh registry
+direnv allow
+cd hexagonalboot-api && direnv allow
+cd ../porto-api-plugins && direnv allow
+cd ../registry-api-deploy && direnv allow
+```
+
+That workspace file is yours only. Template:
+[`hexagonalboot-api/docs/porto-workspace.envrc`](../hexagonalboot-api/docs/porto-workspace.envrc).
 
 ## Layout
 
@@ -28,37 +62,30 @@ registry-api-deploy/
 └── docker-compose.yml
 ```
 
-## IntelliJ: one window for host, plugins, and this deploy
+## IntelliJ: open `porto-workspace` (not a child repo)
 
-Keep **porto-api**, **porto-api-plugins**, and **this deploy** in the same IntelliJ window so you can jump from a Java plugin to YAML, Liquibase, and OpenAPI. Add **this** product only — do not also add `shine-media-api-deploy` if you run the API here (both use port 9091 / H2 9092).
+Host, plugins, and this deploy live under **`~/projects/porto-workspace`**. That folder is the IntelliJ project (it has `.idea/`). The trees stay independent — two Maven poms, this deploy home, no parent `pom.xml`.
 
-Do **not** use **File → Open…** on this deploy. IntelliJ only offers **Attach** for another Maven/Gradle/IntelliJ project. This repo has no `pom.xml`, so that button never appears (and Open would replace or split the window you already have).
+**Open this folder only:**
 
-### If porto-api is already open (and plugins may already be added)
+1. Close any old IntelliJ window that pointed at `~/projects`, `~/projects/porto-api`, `hexagonalboot-api`, or this deploy as its own project.
+2. **File → Open** `~/projects/porto-workspace`.
+3. If IntelliJ asks to import Maven, import **both** `hexagonalboot-api/pom.xml` and `porto-api-plugins/pom.xml` as **separate** Maven projects (not one aggregator). The workspace `.idea` already lists those two.
+4. If it does not auto-import: Maven tool window → **+** → `hexagonalboot-api/pom.xml`, then **+** again → `porto-api-plugins/pom.xml`.
+5. Project tool window → view mode **Project**. You should see `hexagonalboot-api`, `porto-api-plugins`, and `registry-api-deploy`.
+6. If IntelliJ asks to move or attach the project to `~/projects`, click **No**.
 
-This is the usual case.
+Do **not** **File → Open** this deploy, `hexagonalboot-api`, or `porto-api-plugins` on their own. Child trees may still have leftover `.idea/` folders from before `porto-workspace` existed — ignore those.
 
-**porto-api-plugins** (skip if the Maven tool window already lists it):
+Do **not** add a deploy with the Maven **+** button. A deploy is `PORTO_API_HOME`, not a build.
 
-1. Open the **Maven** tool window.
-2. Click **+** (Add Maven Project) and choose `~/projects/porto-api-plugins/pom.xml`.
-
-**This deploy** (not Maven — a different action):
-
-1. **File → New → Module from Existing Sources…**
-2. Select the folder `/Users/YOUR_USER/projects/registry-api-deploy` → **Open**.
-3. Choose **Create module from existing sources**.
-4. On the next screen, set the module directory to `/Users/YOUR_USER/projects/registry-api-deploy` (leave the files in this repo; do not copy them into porto-api).
-5. **Create**.
-
-You should see `registry-api-deploy` as its own module in the **Project** tool window (view mode **Project**, not Packages). IntelliJ may write a local `.iml` here; it is gitignored.
+Only **run** one API host at a time (port 9091 / H2 9092).
 
 ### Project settings
 
-- **Project SDK / Language level:** Java 17 (same as porto-api).
-- **Maven:** auto-import for porto-api and porto-api-plugins only.
-- **porto-core:** install once so both Maven projects resolve: `cd ~/projects/porto-core && mvn install -DskipTests`.
-- Do **not** add this deploy with the Maven **+** button. It is `PORTO_API_HOME`, not a build.
+- **Project SDK / Language level:** Java 21 (same as hexagonalboot-api / Spring Boot 4.1.1).
+- **Maven:** auto-import for hexagonalboot-api and porto-api-plugins only.
+- **porto-core:** still lives outside the workspace. Install once so both Maven projects resolve: `cd ~/projects/porto-core && mvn install -DskipTests`.
 
 ### Copy plugin JARs into this home
 
@@ -67,36 +94,47 @@ IntelliJ compile of porto-api-plugins is not enough: the host loads JARs from `p
 From a terminal, or IntelliJ Maven tool window on **porto-api-plugins** → `package`:
 
 ```bash
-cd ~/projects/porto-api-plugins
-mvn package -Dporto.api.home=$HOME/projects/registry-api-deploy
+cd ~/projects/porto-workspace
+./switch-app.sh registry
 ```
+
+That writes `.current-app` and runs `mvn package` so shared + registry JARs
+copy here. See hexagonalboot-api
+[How plugins are linked to an application](../hexagonalboot-api/README.md#how-plugins-are-linked-to-an-application).
 
 Day-to-day, copy `porto-api-home.properties.example` to a gitignored `porto-api-home.properties` in porto-api-plugins and set:
 
 ```
-porto.api.home=/Users/YOUR_USER/projects/registry-api-deploy
+porto.api.home=/Users/YOUR_USER/projects/porto-workspace/registry-api-deploy
 ```
 
 Then a plain `mvn package` copies JARs here. `-Dporto.api.home=…` still wins when set.
 
 ## Run in IntelliJ
 
+Create the run configuration in the **porto-workspace** window. The main class lives in `hexagonalboot-api`; this directory is only `PORTO_API_HOME`.
+
 1. Package plugins into this home (previous section).
-2. Open `systems.porto.api.PortoApiApplication` in the **porto-api** tree.
-3. **Run → Edit Configurations… → + → Application** (or use the gutter run on `main`):
+2. Open `systems.porto.api.HexagonalBoot` under **hexagonalboot-api**.
+3. **Run → Edit Configurations… → + → Application** (or use the gutter run on `main`), then set:
    - **Name:** `registry-api`
-   - **Module / classpath:** `porto-api`
-   - **Main class:** `systems.porto.api.PortoApiApplication`
-   - **Working directory:** `~/projects/porto-api` (host tree; runtime files come from `PORTO_API_HOME`)
-   - **Environment variables** (semicolon-separated):
+   - **Use classpath of module:** `HexagonalBoot-API` (Maven `artifactId` of the host; IntelliJ may also show `hexagonalboot-api`)
+   - **Main class:** `systems.porto.api.HexagonalBoot`
+   - **Working directory:** `$USER_HOME$/projects/porto-workspace/hexagonalboot-api`  
+     Use the host tree, not `porto-workspace` and not this deploy. Runtime files come from `PORTO_API_HOME`.
+   - **Environment variables** (semicolon-separated in IntelliJ). IntelliJ expands `$USER_HOME$`; do **not** leave a `YOUR_USER` placeholder:
 
 ```
-PORTO_API_HOME=/Users/YOUR_USER/projects/registry-api-deploy;API_ENV=dev;LOG_PATH=/Users/YOUR_USER/projects/registry-api-deploy/logs;LOG_LEVEL=INFO
+PORTO_API_HOME=$USER_HOME$/projects/porto-workspace/registry-api-deploy;API_ENV=dev;LOG_PATH=$USER_HOME$/projects/porto-workspace/registry-api-deploy/logs;LOG_LEVEL=INFO
 ```
 
-Replace `YOUR_USER` with your home directory name. Without `PORTO_API_HOME` the host fails on start — the porto-api working tree is not a runtime home.
+If you prefer a literal path, paste the output of `echo $HOME` (for example `/Users/rodrigo/...`). A log path containing `/Users/YOUR_USER/` means the placeholder was copied as-is and the process cannot create the log directory.
+
+Without `PORTO_API_HOME` the host treats the working directory as the runtime home and fails — `hexagonalboot-api` is not a product deploy.
 
 4. Run or debug that configuration.
+
+Do not create an Application configuration on this deploy folder. It has no host classpath.
 
 Health: `GET http://localhost:9091/api/v1.0.0/health`
 
@@ -107,16 +145,16 @@ Dev H2 is in-process TCP on port **9092** (`jdbc:h2:tcp://127.0.0.1:9092/registr
 Package plugins, then start the host with `PORTO_API_HOME` pointing here:
 
 ```bash
-cd ~/projects/porto-api-plugins
-mvn package -Dporto.api.home=$HOME/projects/registry-api-deploy
+cd ~/projects/porto-workspace/porto-api-plugins
+mvn package -Dporto.api.home=$HOME/projects/porto-workspace/registry-api-deploy
 
-export PORTO_API_HOME=$HOME/projects/registry-api-deploy
+export PORTO_API_HOME=$HOME/projects/porto-workspace/registry-api-deploy
 export API_ENV=dev
 export LOG_PATH=$PORTO_API_HOME/logs
-cd ~/projects/porto-api && ./mvnw spring-boot:run
+cd ~/projects/porto-workspace/hexagonalboot-api && ./mvnw spring-boot:run
 ```
 
-Or from this directory (uses a copied boot jar if present, otherwise `spring-boot:run` from `PORTO_API_SRC`, default `$HOME/projects/porto-api`):
+Or from this directory (uses a copied boot jar if present, otherwise `spring-boot:run` from `PORTO_API_SRC`, default `$HOME/projects/porto-workspace/hexagonalboot-api`):
 
 ```bash
 ./bin/start.sh
@@ -144,4 +182,4 @@ Requires Docker Compose v2.20+ (`depends_on.required`).
 
 ## Plugin JARs
 
-`mvn package -Dporto.api.home=$HOME/projects/registry-api-deploy` in porto-api-plugins copies each module jar to `plugins/{layer}/registry/`. Day-to-day, a gitignored `porto-api-home.properties` in the plugins repo can hold that path so you omit `-D`.
+`mvn package -Dporto.api.home=$HOME/projects/porto-workspace/registry-api-deploy` in porto-api-plugins copies each module jar to `plugins/{layer}/registry/`. Day-to-day, a gitignored `porto-api-home.properties` in the plugins repo can hold that path so you omit `-D`.
